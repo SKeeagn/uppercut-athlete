@@ -134,13 +134,15 @@ export default function Page() {
 
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-10 px-5 py-10">
-      <header className="flex flex-col gap-1">
-        <p className="font-condensed text-sm font-semibold tracking-[0.3em] text-gold">
-          UPPERCUT
-        </p>
+      <header className="flex flex-col gap-4">
         <h1 className="font-condensed text-3xl font-bold uppercase leading-tight tracking-tight">
-          Game Readiness State Checklist
+          Game Readiness State <span className="text-gold">Checklist</span>
         </h1>
+        <p className="text-sm leading-relaxed text-slate-400">
+          To help you stabilise <strong className="font-semibold text-slate-200">confidence, focus and control</strong> in the 48+ hours before game. Use this
+          checklist to <strong className="font-semibold text-slate-200">evidence your readiness</strong> and align your mind and body. This is your{" "}
+          <strong className="font-semibold text-slate-200">transition from preparation to performance</strong>.
+        </p>
       </header>
 
       {submitted ? (
@@ -269,6 +271,9 @@ function Summary({
       <div className="flex flex-col items-center gap-6 pt-2">
         <p className="font-condensed text-4xl font-bold text-gold">
           I&rsquo;m Ready.
+        </p>
+        <p className="text-xs text-gold/60">
+          This stays on your device only. Nothing is sent or stored anywhere else.
         </p>
         <button
           onClick={onEdit}
