@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "grsc-2026";
+const IN_APP_BANNER_DISMISSED_KEY = "grsc-2026-in-app-banner-dismissed";
+const IN_APP_BROWSER_PATTERN = /WhatsApp|FBAN|FBAV|Instagram/i;
+const IOS_PATTERN = /iPhone|iPad|iPod/i;
+const ANDROID_PATTERN = /Android/i;
 
 type Section = {
   number: string;
@@ -100,40 +104,80 @@ function emptyState(): FormState {
   return state;
 }
 
+const CHECK_KEYS = SECTIONS.map((section) => section.check.key);
+
 export default function Page() {
   const [formData, setFormData] = useState<FormState>(emptyState);
-  const [submitted, setSubmitted] = useState(false);
+  const [interacted, setInteracted] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [showInAppBanner, setShowInAppBanner] = useState(false);
+  const [platform, setPlatform] = useState<"ios" | "android" | "other">("other");
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
         setFormData(JSON.parse(saved));
-        setSubmitted(true);
+        setInteracted(true);
       } catch {
         // ignore malformed data
       }
     }
     setHydrated(true);
+
+    const userAgent = navigator.userAgent;
+    setPlatform(
+      IOS_PATTERN.test(userAgent)
+        ? "ios"
+        : ANDROID_PATTERN.test(userAgent)
+          ? "android"
+          : "other",
+    );
+
+    const dismissed = sessionStorage.getItem(IN_APP_BANNER_DISMISSED_KEY);
+    if (!dismissed && IN_APP_BROWSER_PATTERN.test(userAgent)) {
+      setShowInAppBanner(true);
+    }
   }, []);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
-    setSubmitted(true);
+  function handleDismissInAppBanner() {
+    sessionStorage.setItem(IN_APP_BANNER_DISMISSED_KEY, "true");
+    setShowInAppBanner(false);
   }
 
-  function handleEdit() {
-    setSubmitted(false);
+  function handleTextChange(key: string, value: string) {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleTextBlur() {
+    setInteracted(true);
+    setFormData((prev) => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(prev));
+      return prev;
+    });
+  }
+
+  function handleCheckboxChange(key: string, checked: boolean) {
+    setInteracted(true);
+    setFormData((prev) => {
+      const next = { ...prev, [key]: checked };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
   }
 
   if (!hydrated) {
     return null;
   }
 
+  const ready = CHECK_KEYS.every((key) => formData[key]);
+
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-10 px-5 py-10">
+      {showInAppBanner && (
+        <InAppBrowserBanner platform={platform} onDismiss={handleDismissInAppBanner} />
+      )}
+
       <header className="flex flex-col gap-4">
         <h1 className="font-condensed text-3xl font-bold uppercase leading-tight tracking-tight">
           Game Readiness State <span className="text-gold">Checklist</span>
@@ -143,34 +187,39 @@ export default function Page() {
           checklist to <strong className="font-semibold text-slate-200">evidence your readiness</strong> and align your mind and body. This is your{" "}
           <strong className="font-semibold text-slate-200">transition from preparation to performance</strong>.
         </p>
+        <p className="flex items-center gap-2 text-xs text-white/40">
+          <span className="h-1.5 w-1.5 rounded-full bg-gold/60" />
+          Saved automatically on this device.
+        </p>
       </header>
 
-      {submitted ? (
-        <Summary formData={formData} onEdit={handleEdit} />
-      ) : (
-        <Form formData={formData} setFormData={setFormData} onSubmit={handleSubmit} />
-      )}
+      <ChecklistForm
+        formData={formData}
+        onTextChange={handleTextChange}
+        onTextBlur={handleTextBlur}
+        onCheckboxChange={handleCheckboxChange}
+      />
+
+      <ReadyBanner interacted={interacted} ready={ready} />
 
       <Footer />
     </main>
   );
 }
 
-function Form({
+function ChecklistForm({
   formData,
-  setFormData,
-  onSubmit,
+  onTextChange,
+  onTextBlur,
+  onCheckboxChange,
 }: {
   formData: FormState;
-  setFormData: React.Dispatch<React.SetStateAction<FormState>>;
-  onSubmit: (e: React.FormEvent) => void;
+  onTextChange: (key: string, value: string) => void;
+  onTextBlur: () => void;
+  onCheckboxChange: (key: string, checked: boolean) => void;
 }) {
-  function update(key: string, value: string | boolean) {
-    setFormData((prev) => ({ ...prev, [key]: value }));
-  }
-
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-10">
+    <div className="flex flex-col gap-10">
       {SECTIONS.map((section) => (
         <section key={section.number} className="flex flex-col gap-4">
           <div className="flex items-baseline gap-3 border-b border-gold/30 pb-3">
@@ -187,7 +236,8 @@ function Form({
             <input
               type="text"
               value={formData[section.field1.key] as string}
-              onChange={(e) => update(section.field1.key, e.target.value)}
+              onChange={(e) => onTextChange(section.field1.key, e.target.value)}
+              onBlur={onTextBlur}
               className="rounded-md border border-white/15 bg-white/5 px-4 py-3 text-white placeholder-white/30 outline-none focus:border-gold"
             />
           </label>
@@ -197,7 +247,8 @@ function Form({
             <input
               type="text"
               value={formData[section.field2.key] as string}
-              onChange={(e) => update(section.field2.key, e.target.value)}
+              onChange={(e) => onTextChange(section.field2.key, e.target.value)}
+              onBlur={onTextBlur}
               className="rounded-md border border-white/15 bg-white/5 px-4 py-3 text-white placeholder-white/30 outline-none focus:border-gold"
             />
           </label>
@@ -206,91 +257,60 @@ function Form({
             <input
               type="checkbox"
               checked={formData[section.check.key] as boolean}
-              onChange={(e) => update(section.check.key, e.target.checked)}
+              onChange={(e) => onCheckboxChange(section.check.key, e.target.checked)}
               className="mt-1 h-5 w-5 shrink-0 accent-gold"
             />
             <span className="text-sm text-white/90">{section.check.label}</span>
           </label>
         </section>
       ))}
-
-      <button
-        type="submit"
-        className="rounded-md bg-gold px-6 py-4 font-condensed text-lg font-bold uppercase tracking-wide text-navy transition hover:brightness-110"
-      >
-        Confirm Readiness
-      </button>
-    </form>
-  );
-}
-
-function Summary({
-  formData,
-  onEdit,
-}: {
-  formData: FormState;
-  onEdit: () => void;
-}) {
-  return (
-    <div className="flex flex-col gap-10">
-      {SECTIONS.map((section) => (
-        <section key={section.number} className="flex flex-col gap-4">
-          <div className="flex items-baseline gap-3 border-b border-gold/30 pb-3">
-            <span className="font-condensed text-2xl font-bold text-gold">
-              {section.number}
-            </span>
-            <h2 className="font-condensed text-lg font-semibold uppercase leading-tight">
-              {section.title}
-            </h2>
-          </div>
-
-          <SummaryField
-            label={section.field1.label}
-            value={formData[section.field1.key] as string}
-          />
-          <SummaryField
-            label={section.field2.label}
-            value={formData[section.field2.key] as string}
-          />
-
-          <div className="flex items-start gap-3 pt-1">
-            <span
-              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                formData[section.check.key]
-                  ? "border-gold bg-gold text-navy"
-                  : "border-white/30 text-transparent"
-              }`}
-            >
-              ✓
-            </span>
-            <span className="text-sm text-white/90">{section.check.label}</span>
-          </div>
-        </section>
-      ))}
-
-      <div className="flex flex-col items-center gap-6 pt-2">
-        <p className="font-condensed text-4xl font-bold text-gold">
-          I&rsquo;m Ready.
-        </p>
-        <p className="text-xs text-gold/60">
-          This stays on your device only. Nothing is sent or stored anywhere else.
-        </p>
-        <button
-          onClick={onEdit}
-          className="rounded-md border border-gold px-6 py-3 font-condensed text-sm font-bold uppercase tracking-wide text-gold transition hover:bg-gold hover:text-navy"
-        >
-          Edit
-        </button>
-      </div>
     </div>
   );
 }
 
-function SummaryField({ label, value }: { label: string; value: string }) {
+function InAppBrowserBanner({
+  platform,
+  onDismiss,
+}: {
+  platform: "ios" | "android" | "other";
+  onDismiss: () => void;
+}) {
+  const message =
+    platform === "ios"
+      ? 'For the best experience, tap ••• and choose "Open in Safari" before filling this in.'
+      : 'For the best experience, open this in your browser before filling this in.';
+
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-sm text-white/50">{label}</span>
-      <span className="text-white/95">{value || "—"}</span>
+    <div className="flex items-start gap-3 rounded-md border border-gold/30 bg-gold/10 px-4 py-3 text-sm text-gold">
+      <p className="flex-1 leading-snug">{message}</p>
+      <button
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        className="shrink-0 text-gold/70 transition hover:text-gold"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+function ReadyBanner({ interacted, ready }: { interacted: boolean; ready: boolean }) {
+  return (
+    <div className="flex flex-col items-center gap-6 pt-2">
+      {interacted && (
+        <p
+          className={
+            ready
+              ? "font-condensed text-4xl font-bold text-gold underline decoration-2 underline-offset-8 drop-shadow-[0_0_20px_rgba(201,162,75,0.5)]"
+              : "font-condensed text-4xl font-bold text-white/20"
+          }
+        >
+          I&rsquo;m Ready.
+        </p>
+      )}
+      <p className="text-xs text-gold/60">
+        This stays on your device only. Nothing is sent or stored anywhere else.
+      </p>
     </div>
   );
 }
