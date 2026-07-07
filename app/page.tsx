@@ -101,10 +101,12 @@ function emptyState(): FormState {
     state[section.field2.key] = "";
     state[section.check.key] = false;
   }
+  state.weeklyGrowth = "";
+  state.growthConfirm = false;
   return state;
 }
 
-const CHECK_KEYS = SECTIONS.map((section) => section.check.key);
+const CHECK_KEYS = [...SECTIONS.map((section) => section.check.key), "growthConfirm"];
 
 export default function Page() {
   const [formData, setFormData] = useState<FormState>(emptyState);
@@ -200,6 +202,13 @@ export default function Page() {
         onCheckboxChange={handleCheckboxChange}
       />
 
+      <GrowthSection
+        formData={formData}
+        onTextChange={handleTextChange}
+        onTextBlur={handleTextBlur}
+        onCheckboxChange={handleCheckboxChange}
+      />
+
       <ReadyBanner interacted={interacted} ready={ready} />
 
       <Footer />
@@ -265,6 +274,46 @@ function ChecklistForm({
         </section>
       ))}
     </div>
+  );
+}
+
+function GrowthSection({
+  formData,
+  onTextChange,
+  onTextBlur,
+  onCheckboxChange,
+}: {
+  formData: FormState;
+  onTextChange: (key: string, value: string) => void;
+  onTextBlur: () => void;
+  onCheckboxChange: (key: string, checked: boolean) => void;
+}) {
+  return (
+    <section className="flex flex-col gap-4">
+      <h2 className="font-condensed text-base font-semibold uppercase leading-tight text-white/80">
+        Why are you better than you were last week?
+      </h2>
+
+      <label className="flex flex-col gap-2">
+        <textarea
+          value={formData.weeklyGrowth as string}
+          onChange={(e) => onTextChange("weeklyGrowth", e.target.value)}
+          onBlur={onTextBlur}
+          rows={4}
+          className="rounded-md border border-white/15 bg-white/5 px-4 py-3 text-white placeholder-white/30 outline-none focus:border-gold"
+        />
+      </label>
+
+      <label className="flex items-start gap-3 pt-1">
+        <input
+          type="checkbox"
+          checked={formData.growthConfirm as boolean}
+          onChange={(e) => onCheckboxChange("growthConfirm", e.target.checked)}
+          className="mt-1 h-5 w-5 shrink-0 accent-gold"
+        />
+        <span className="text-sm text-white/90">This is my honest reflection.</span>
+      </label>
+    </section>
   );
 }
 
