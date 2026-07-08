@@ -12,6 +12,15 @@ export const metadata: Metadata = {
   title: "Game Readiness State Checklist | Uppercut",
   description:
     "Pre-competition mental readiness checklist for rugby players, by Uppercut.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Ready",
+  },
+  icons: {
+    apple: "/icon-180.png",
+  },
 };
 
 export default function RootLayout({
