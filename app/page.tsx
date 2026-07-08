@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseClient } from "@/lib/supabase";
 
 const STORAGE_KEY = "grsc-2026";
 const IN_APP_BANNER_DISMISSED_KEY = "grsc-2026-in-app-banner-dismissed";
@@ -144,7 +144,7 @@ export default function Page() {
       setShowInAppBanner(true);
     }
 
-    supabase.from("reflection_events").insert({ event_type: "open" });
+    getSupabaseClient()?.from("reflection_events").insert({ event_type: "open" });
   }, []);
 
   function handleDismissInAppBanner() {
@@ -178,7 +178,7 @@ export default function Page() {
   useEffect(() => {
     if (ready && !hasTrackedCompletion.current) {
       hasTrackedCompletion.current = true;
-      supabase.from("reflection_events").insert({ event_type: "complete" });
+      getSupabaseClient()?.from("reflection_events").insert({ event_type: "complete" });
     }
   }, [ready]);
 
