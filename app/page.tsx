@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { track } from "@vercel/analytics";
 
 const STORAGE_KEY = "grsc-2026";
 const IN_APP_BANNER_DISMISSED_KEY = "grsc-2026-in-app-banner-dismissed";
@@ -114,6 +115,7 @@ export default function Page() {
   const [hydrated, setHydrated] = useState(false);
   const [showInAppBanner, setShowInAppBanner] = useState(false);
   const [platform, setPlatform] = useState<"ios" | "android" | "other">("other");
+  const hasTrackedCompletion = useRef(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -168,11 +170,18 @@ export default function Page() {
     });
   }
 
+  const ready = CHECK_KEYS.every((key) => formData[key]);
+
+  useEffect(() => {
+    if (ready && !hasTrackedCompletion.current) {
+      hasTrackedCompletion.current = true;
+      track("completed");
+    }
+  }, [ready]);
+
   if (!hydrated) {
     return null;
   }
-
-  const ready = CHECK_KEYS.every((key) => formData[key]);
 
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-10 px-5 py-10">
@@ -358,7 +367,8 @@ function ReadyBanner({ interacted, ready }: { interacted: boolean; ready: boolea
         </p>
       )}
       <p className="text-xs text-gold/60">
-        This stays on your device only. Nothing is sent or stored anywhere else.
+        Your answers stay on this device. We only see how many people used
+        this and completed it, not what they wrote.
       </p>
     </div>
   );
