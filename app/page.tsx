@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
-import { track } from "@vercel/analytics";
+import { supabase } from "@/lib/supabase";
 
 const STORAGE_KEY = "grsc-2026";
 const IN_APP_BANNER_DISMISSED_KEY = "grsc-2026-in-app-banner-dismissed";
@@ -143,6 +143,8 @@ export default function Page() {
     if (!dismissed && IN_APP_BROWSER_PATTERN.test(userAgent)) {
       setShowInAppBanner(true);
     }
+
+    supabase.from("reflection_events").insert({ event_type: "open" });
   }, []);
 
   function handleDismissInAppBanner() {
@@ -176,7 +178,7 @@ export default function Page() {
   useEffect(() => {
     if (ready && !hasTrackedCompletion.current) {
       hasTrackedCompletion.current = true;
-      track("completed");
+      supabase.from("reflection_events").insert({ event_type: "complete" });
     }
   }, [ready]);
 
