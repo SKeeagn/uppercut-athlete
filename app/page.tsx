@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { ChangeEvent } from "react";
 import { track } from "@vercel/analytics";
 
 const STORAGE_KEY = "grsc-2026";
@@ -251,23 +252,19 @@ function ChecklistForm({
 
           <label className="flex flex-col gap-2">
             <span className="text-sm text-white/70">{section.field1.label}</span>
-            <input
-              type="text"
+            <AutoGrowTextarea
               value={formData[section.field1.key] as string}
-              onChange={(e) => onTextChange(section.field1.key, e.target.value)}
+              onChange={(value) => onTextChange(section.field1.key, value)}
               onBlur={onTextBlur}
-              className="rounded-md border border-white/15 bg-white/5 px-4 py-3 text-white placeholder-white/30 outline-none focus:border-gold"
             />
           </label>
 
           <label className="flex flex-col gap-2">
             <span className="text-sm text-white/70">{section.field2.label}</span>
-            <input
-              type="text"
+            <AutoGrowTextarea
               value={formData[section.field2.key] as string}
-              onChange={(e) => onTextChange(section.field2.key, e.target.value)}
+              onChange={(value) => onTextChange(section.field2.key, value)}
               onBlur={onTextBlur}
-              className="rounded-md border border-white/15 bg-white/5 px-4 py-3 text-white placeholder-white/30 outline-none focus:border-gold"
             />
           </label>
 
@@ -282,6 +279,63 @@ function ChecklistForm({
           </label>
         </section>
       ))}
+    </div>
+  );
+}
+
+function AutoGrowTextarea({
+  value,
+  onChange,
+  onBlur,
+  maxLength = 280,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onBlur: () => void;
+  maxLength?: number;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  function resize(el: HTMLTextAreaElement) {
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      resize(textareaRef.current);
+    }
+  }, [value]);
+
+  function handleChange(e: ChangeEvent<HTMLTextAreaElement>) {
+    resize(e.target);
+    onChange(e.target.value);
+  }
+
+  const remaining = maxLength - value.length;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <textarea
+        ref={textareaRef}
+        rows={1}
+        value={value}
+        onChange={handleChange}
+        onBlur={onBlur}
+        maxLength={maxLength}
+        className="resize-none overflow-hidden rounded-md border border-white/15 bg-white/5 px-4 py-3 text-white placeholder-white/30 outline-none focus:border-gold"
+      />
+      {remaining <= 30 && (
+        <span
+          className={
+            remaining <= 10
+              ? "text-right text-xs text-gold"
+              : "text-right text-xs text-white/40"
+          }
+        >
+          {value.length}/{maxLength}
+        </span>
+      )}
     </div>
   );
 }
