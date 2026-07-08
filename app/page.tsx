@@ -144,7 +144,14 @@ export default function Page() {
       setShowInAppBanner(true);
     }
 
-    getSupabaseClient()?.from("reflection_events").insert({ event_type: "open" });
+    const client = getSupabaseClient();
+    console.log("[reflection_events] client on mount:", client ? "present" : "null");
+    client
+      ?.from("reflection_events")
+      .insert({ event_type: "open" })
+      .then(({ data, error }) => {
+        console.log("[reflection_events] open insert result:", { data, error });
+      });
   }, []);
 
   function handleDismissInAppBanner() {
@@ -178,7 +185,12 @@ export default function Page() {
   useEffect(() => {
     if (ready && !hasTrackedCompletion.current) {
       hasTrackedCompletion.current = true;
-      getSupabaseClient()?.from("reflection_events").insert({ event_type: "complete" });
+      getSupabaseClient()
+        ?.from("reflection_events")
+        .insert({ event_type: "complete" })
+        .then(({ data, error }) => {
+          console.log("[reflection_events] complete insert result:", { data, error });
+        });
     }
   }, [ready]);
 
